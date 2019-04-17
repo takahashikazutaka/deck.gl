@@ -110,7 +110,7 @@ RoundedRectangleLayer.defaultProps = {
 }
 ```
 
-Modified fragment shader that uses this uniform (learn more in [writing your own shaders](/docs/developer-guide/writing-shaders.md)):
+Modified fragment shader that uses this uniform (learn more in [writing your own shaders](/docs/developer-guide/custom-layers/writing-shaders.md)):
 
 ```js
 /// rounded-rectangle-layer-fragment.js
