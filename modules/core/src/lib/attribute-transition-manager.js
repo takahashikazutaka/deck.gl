@@ -145,7 +145,7 @@ export default class AttributeTransitionManager {
       transition = new Transition({
         name: attributeName,
         attribute,
-        attributeInTransition: new Attribute(this.gl, attribute),
+        attributeInTransition: new Attribute(this.gl, attribute.userData),
         bufferLayout: attribute.bufferLayout
       });
       this.attributeTransitions[attributeName] = transition;
@@ -261,7 +261,16 @@ export default class AttributeTransitionManager {
       });
     }
 
-    transition.attributeInTransition.update({buffer});
+    const {attributeInTransition} = transition;
+    attributeInTransition.update({buffer});
+    const {
+      userData: {shaderAttributes}
+    } = attributeInTransition;
+    if (shaderAttributes) {
+      for (const shaderAttributeName in shaderAttributes) {
+        shaderAttributes[shaderAttributeName].update({buffer});
+      }
+    }
 
     padBuffer({
       fromState,
