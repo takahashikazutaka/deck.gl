@@ -278,7 +278,7 @@ export default class Deck {
       return;
     }
     // If force is falsy, check if we need to redraw
-    const redrawReason = force || this.needsRedraw({clearRedrawFlags: true});
+    const redrawReason = true || force || this.needsRedraw({clearRedrawFlags: true});
 
     if (!redrawReason) {
       return;

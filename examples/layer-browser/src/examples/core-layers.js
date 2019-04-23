@@ -184,7 +184,8 @@ const PolygonLayerExample = {
     opacity: 0.8,
     pickable: true,
     lineDashJustified: true,
-    elevationScale: 0.6
+    elevationScale: 0.6,
+    transitions: {getElevation: 1000}
   }
 };
 
