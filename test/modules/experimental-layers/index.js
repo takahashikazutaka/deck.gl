@@ -40,3 +40,5 @@ test('Top-level imports', t => {
 });
 
 import './tile-layer/tile-cache.spec';
+
+import './gpu-grid-layer/gpu-grid-cell-layer-vertex.spec';

@@ -28,7 +28,8 @@ import fs from './gpu-grid-cell-layer-fragment.glsl';
 
 const DEFAULT_MINCOLOR = [0, 0, 0, 255];
 const DEFAULT_MAXCOLOR = [0, 255, 0, 255];
-const AGGREGATION_DATA_UBO_INDEX = 0;
+const COLOR_DATA_UBO_INDEX = 0;
+const ELEVATION_DATA_UBO_INDEX = 1;
 
 const defaultProps = {
   cellSize: {type: 'number', min: 0, max: 1000, value: 1000},
@@ -52,9 +53,14 @@ export default class GPUGridCellLayer extends Layer {
   initializeState() {
     const attributeManager = this.getAttributeManager();
     attributeManager.addInstanced({
-      instanceCounts: {
+      colors: {
         size: 4,
-        update: this.calculateInstanceCounts,
+        update: this.calculateColors,
+        noAlloc: true
+      },
+      elevations: {
+        size: 4,
+        update: this.calculateElevations,
         noAlloc: true
       }
     });
@@ -71,10 +77,13 @@ export default class GPUGridCellLayer extends Layer {
       const model = this._getModel(gl);
       this._setupUniformBuffer(model);
       this.setState({model});
-      this.state.attributeManager.invalidate('instanceCounts');
+      this.state.attributeManager.invalidateAll();
     }
-    if (props.countsBuffer !== oldProps.countsBuffer) {
-      this.state.attributeManager.invalidate('instanceCounts');
+    if (props.colorBuffer !== oldProps.colorBuffer) {
+      this.state.attributeManager.invalidate('colors');
+    }
+    if (props.elevationBuffer !== oldProps.elevationBuffer) {
+      this.state.attributeManager.invalidate('elevations');
     }
   }
 
@@ -101,13 +110,17 @@ export default class GPUGridCellLayer extends Layer {
       gridOffset,
       minColor,
       maxColor,
-      maxCountBuffer
+      colorRange,
+      colorMaxMinBuffer,
+      elevationRange,
+      elevationMaxMinBuffer
     } = this.props;
 
     const gridOriginLow = [fp64LowPart(gridOrigin[0]), fp64LowPart(gridOrigin[1])];
     const gridOffsetLow = [fp64LowPart(gridOffset[0]), fp64LowPart(gridOffset[1])];
 
-    maxCountBuffer.bind({target: GL.UNIFORM_BUFFER, index: AGGREGATION_DATA_UBO_INDEX});
+    colorMaxMinBuffer.bind({target: GL.UNIFORM_BUFFER, index: COLOR_DATA_UBO_INDEX});
+    elevationMaxMinBuffer.bind({target: GL.UNIFORM_BUFFER, index: ELEVATION_DATA_UBO_INDEX});
     this.state.model.render(
       Object.assign({}, uniforms, {
         cellSize,
@@ -120,16 +133,26 @@ export default class GPUGridCellLayer extends Layer {
         gridOffset,
         gridOffsetLow,
         minColor,
-        maxColor
+        maxColor,
+        colorRange,
+        elevationRange
       })
     );
-    maxCountBuffer.unbind({target: GL.UNIFORM_BUFFER, index: AGGREGATION_DATA_UBO_INDEX});
+    colorMaxMinBuffer.unbind({target: GL.UNIFORM_BUFFER, index: COLOR_DATA_UBO_INDEX});
+    elevationMaxMinBuffer.unbind({target: GL.UNIFORM_BUFFER, index: ELEVATION_DATA_UBO_INDEX});
   }
 
-  calculateInstanceCounts(attribute) {
-    const {countsBuffer} = this.props;
+  calculateColors(attribute) {
+    const {colorBuffer} = this.props;
     attribute.update({
-      buffer: countsBuffer
+      buffer: colorBuffer
+    });
+  }
+
+  calculateElevations(attribute) {
+    const {elevationBuffer} = this.props;
+    attribute.update({
+      buffer: elevationBuffer
     });
   }
 
@@ -137,10 +160,12 @@ export default class GPUGridCellLayer extends Layer {
     const gl = this.context.gl;
     const programHandle = model.program.handle;
 
-    const uniformBlockIndex = gl.getUniformBlockIndex(programHandle, 'AggregationData');
-    gl.uniformBlockBinding(programHandle, uniformBlockIndex, AGGREGATION_DATA_UBO_INDEX);
+    const colorIndex = gl.getUniformBlockIndex(programHandle, 'ColorData');
+    const elevationIndex = gl.getUniformBlockIndex(programHandle, 'ElevationData');
+    gl.uniformBlockBinding(programHandle, colorIndex, COLOR_DATA_UBO_INDEX);
+    gl.uniformBlockBinding(programHandle, elevationIndex, ELEVATION_DATA_UBO_INDEX);
   }
 }
 
-GPUGridCellLayer.layerName = 'GridCellLayer';
+GPUGridCellLayer.layerName = 'GPUGridCellLayer';
 GPUGridCellLayer.defaultProps = defaultProps;

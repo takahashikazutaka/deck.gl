@@ -4,12 +4,9 @@ import {fp64 as fp64Utils} from 'luma.gl';
 import {COORDINATE_SYSTEM} from '../../../lib/constants';
 import {createIterable} from '../../../utils/iterable-utils';
 import {count} from '../../../utils/count';
-
-import {AGGREGATION_OPERATION} from './gpu-grid-aggregator-constants';
 const {fp64LowPart} = fp64Utils;
 
 const R_EARTH = 6378000;
-const DEFAULT_WEIGHT = [1, 0, 0];
 
 // Takes data and aggregation params and returns aggregated data.
 export function pointToDensityGridData({
@@ -19,20 +16,15 @@ export function pointToDensityGridData({
   gpuGridAggregator,
   gpuAggregation,
   aggregationFlags,
-  getWeight,
+  weightParams,
   fp64 = false,
   coordinateSystem = COORDINATE_SYSTEM.LNGLAT,
   viewport = null,
   boundingBox = null
 }) {
   let gridData = {};
-  assert(
-    aggregationFlags.dataChanged ||
-      aggregationFlags.cellSizeChanged ||
-      aggregationFlags.viewportChanged
-  );
   if (aggregationFlags.dataChanged) {
-    gridData = parseGridData(data, getPosition, getWeight);
+    gridData = parseGridData(data, getPosition, weightParams);
     boundingBox = gridData.boundingBox;
   }
   let cellSize = [cellSizeMeters, cellSizeMeters];
@@ -73,10 +65,7 @@ export function pointToDensityGridData({
   });
 
   return {
-    countsBuffer: aggregatedData.weight1.aggregationBuffer,
-    maxCountBuffer: aggregatedData.weight1.maxBuffer,
-    countsData: aggregatedData.weight1.aggregationData,
-    maxCountData: aggregatedData.weight1.maxData,
+    weights: aggregatedData,
     gridSize: opts.gridSize,
     gridOrigin: opts.gridOrigin,
     cellSize,
@@ -86,11 +75,13 @@ export function pointToDensityGridData({
 
 // Parse input data to build positions, wights and bounding box.
 /* eslint-disable max-statements */
-function parseGridData(data, getPosition, getWeight = null) {
+function parseGridData(data, getPosition, weightParams) {
   const pointCount = count(data);
-  const positions = new Float32Array(pointCount * 2);
+
+  // For CPU Aggregation this needs to have full 64 bit precession, hence don't use FLoat32Array
+  // For GPU Aggregation this will be converted into Float32Array
+  const positions = new Float64Array(pointCount * 2);
   const positions64xyLow = new Float32Array(pointCount * 2);
-  const weightValues = new Float32Array(pointCount * 3);
 
   let yMin = Infinity;
   let yMax = -Infinity;
@@ -98,6 +89,14 @@ function parseGridData(data, getPosition, getWeight = null) {
   let xMax = -Infinity;
   let y;
   let x;
+
+  const weights = {};
+  for (const name in weightParams) {
+    weights[name] = Object.assign({}, weightParams[name], {
+      values: new Float32Array(pointCount * 3)
+    });
+  }
+
   const {iterable, objectInfo} = createIterable(data);
   for (const object of iterable) {
     objectInfo.index++;
@@ -111,15 +110,18 @@ function parseGridData(data, getPosition, getWeight = null) {
     positions64xyLow[index * 2] = fp64LowPart(x);
     positions64xyLow[index * 2 + 1] = fp64LowPart(y);
 
-    const weight = getWeight ? getWeight(object, objectInfo) : DEFAULT_WEIGHT;
-    // Aggregator expects each weight is an array of size 3
-    if (Array.isArray(weight)) {
-      weightValues[index * 3] = weight[0];
-      weightValues[index * 3 + 1] = weight[1];
-      weightValues[index * 3 + 2] = weight[2];
-    } else {
-      // backward compitability
-      weightValues[index * 3] = weight;
+    for (const name in weightParams) {
+      const weight = weightParams[name].getWeight(object);
+
+      // Aggregator expects each weight is an array of size 3
+      if (Array.isArray(weight)) {
+        weights[name].values[index * 3] = weight[0];
+        weights[name].values[index * 3 + 1] = weight[1];
+        weights[name].values[index * 3 + 2] = weight[2];
+      } else {
+        // backward compitability
+        weights[name].values[index * 3] = weight;
+      }
     }
 
     if (Number.isFinite(y) && Number.isFinite(x)) {
@@ -130,14 +132,7 @@ function parseGridData(data, getPosition, getWeight = null) {
       xMax = x > xMax ? x : xMax;
     }
   }
-  const weights = {
-    weight1: {
-      size: 1,
-      operation: AGGREGATION_OPERATION.SUM,
-      needMax: true,
-      values: weightValues
-    }
-  };
+
   const boundingBox = {xMin, xMax, yMin, yMax};
   return {
     positions,
