@@ -155,7 +155,7 @@ export default class LayerControls extends PureComponent {
     let max;
 
     if (propType && Number.isFinite(propType.max)) {
-      max = Math.min(propType.max, 100);
+      max = Math.min(propType.max, 250);
     } else if (/angle/i.test(settingName)) {
       max = 360;
     } else {

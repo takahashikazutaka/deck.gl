@@ -27,11 +27,14 @@ import {pointToDensityGridData} from './grid-aggregator';
 
 function nop() {}
 
+// To detect a default value vs custom value, used in new-grid-layer
+const DEFAULT_GETCOLORVALUE = points => points.length;
+const DEFAULT_GETELEVATIONVALUE = points => points.length;
 const defaultProps = {
   // color
   colorDomain: null,
   colorRange: defaultColorRange,
-  getColorValue: {type: 'accessor', value: points => points.length},
+  getColorValue: DEFAULT_GETCOLORVALUE,
   lowerPercentile: {type: 'number', min: 0, max: 100, value: 0},
   upperPercentile: {type: 'number', min: 0, max: 100, value: 100},
   onSetColorDomain: nop,
@@ -39,7 +42,7 @@ const defaultProps = {
   // elevation
   elevationDomain: null,
   elevationRange: [0, 1000],
-  getElevationValue: {type: 'accessor', value: points => points.length},
+  getElevationValue: DEFAULT_GETELEVATIONVALUE,
   elevationLowerPercentile: {type: 'number', min: 0, max: 100, value: 0},
   elevationUpperPercentile: {type: 'number', min: 0, max: 100, value: 100},
   elevationScale: 1,
@@ -352,3 +355,5 @@ export default class GridLayer extends CompositeLayer {
 
 GridLayer.layerName = 'GridLayer';
 GridLayer.defaultProps = defaultProps;
+GridLayer.DEFAULT_GETCOLORVALUE = DEFAULT_GETCOLORVALUE;
+GridLayer.DEFAULT_GETELEVATIONVALUE = DEFAULT_GETELEVATIONVALUE;

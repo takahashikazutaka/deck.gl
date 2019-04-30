@@ -3,7 +3,8 @@ import {
   PathOutlineLayer,
   PathMarkerLayer,
   AdvancedTextLayer,
-  GPUGridLayer
+  GPUGridLayer,
+  NewGridLayer
   // KMLLayer
 } from '@deck.gl/experimental-layers';
 
@@ -11,6 +12,7 @@ import {COORDINATE_SYSTEM} from 'deck.gl';
 import GL from 'luma.gl/constants';
 import {CylinderGeometry} from 'luma.gl';
 import * as dataSamples from '../data-samples';
+import {AGGREGATION_OPERATION} from '@deck.gl/core';
 
 const LIGHT_SETTINGS = {
   lightsPosition: [-122.45, 37.66, 8000, -122.0, 38.0, 8000],
@@ -180,6 +182,30 @@ const GPUGridLayerExample = {
     extruded: true,
     pickable: false,
     getPosition: d => d.COORDINATES,
+    getColorWeight: x => x.SPACES,
+    colorAggregation: AGGREGATION_OPERATION.MEAN,
+    getElevationWeight: x => x.SPACES,
+    elevationAggregation: AGGREGATION_OPERATION.MAX,
+
+    lightSettings: LIGHT_SETTINGS
+  }
+};
+
+const NewGridLayerExample = {
+  layer: NewGridLayer,
+  getData: () => dataSamples.points,
+  props: {
+    id: 'new-grid-layer',
+    cellSize: 200,
+    opacity: 1,
+    extruded: true,
+    pickable: false,
+    getPosition: d => d.COORDINATES,
+    getColorWeight: x => x.SPACES,
+    colorAggregation: AGGREGATION_OPERATION.MEAN,
+    getElevationWeight: x => x.SPACES,
+    elevationAggregation: AGGREGATION_OPERATION.MAX,
+
     lightSettings: LIGHT_SETTINGS
   }
 };
@@ -212,6 +238,7 @@ export default {
   'Experimental Core Layers': {
     AdvancedTextLayer: AdvancedTextLayerExample,
     GPUGridLayer: GPUGridLayerExample,
+    NewGridLayer: NewGridLayerExample,
     'GPUGridLayer (1M)': GPUGridLayerPerfExample('1M', dataSamples.getPoints1M),
     'GPUGridLayer (5M)': GPUGridLayerPerfExample('5M', dataSamples.getPoints5M)
   }
