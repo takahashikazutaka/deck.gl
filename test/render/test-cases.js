@@ -1,8 +1,8 @@
 import * as dataSamples from '../../examples/layer-browser/src/data-samples';
 import {parseColor, setOpacity} from '../../examples/layer-browser/src/utils/color';
-import {GPUGridLayer} from '@deck.gl/experimental-layers';
+// import {GPUGridLayer} from '@deck.gl/experimental-layers';
 import GL from 'luma.gl/constants';
-import {OrbitView, OrthographicView, FirstPersonView} from 'deck.gl';
+import {OrbitView, OrthographicView, FirstPersonView, AGGREGATION_OPERATION} from '@deck.gl/core';
 
 const ICON_ATLAS = './test/render/icon-atlas.png';
 
@@ -663,7 +663,7 @@ export const TEST_CASES = [
     ignoreGPUs: [`Intel`]
   },
   {
-    name: 'grid-lnglat',
+    name: 'grid-lnglat-cpu',
     viewState: {
       latitude: 37.751537058389985,
       longitude: -122.42694203247012,
@@ -682,7 +682,37 @@ export const TEST_CASES = [
         getPosition: d => d.COORDINATES,
         getColorValue,
         getElevationValue,
-        lightSettings: LIGHT_SETTINGS
+        lightSettings: LIGHT_SETTINGS,
+        gpuAggregation: false
+      })
+    ],
+    referenceImageUrl: './test/render/golden-images/grid-lnglat.png',
+    ignoreGPUs: [`Intel`]
+  },
+  {
+    name: 'grid-lnglat-gpu',
+    viewState: {
+      latitude: 37.751537058389985,
+      longitude: -122.42694203247012,
+      zoom: 11.5,
+      pitch: 0,
+      bearing: 0
+    },
+    layers: [
+      new GridLayer({
+        id: 'grid-lnglat',
+        data: dataSamples.points,
+        cellSize: 200,
+        opacity: 1,
+        extruded: true,
+        pickable: true,
+        getPosition: d => d.COORDINATES,
+        getColorWeight: x => x.SPACES,
+        colorAggregation: AGGREGATION_OPERATION.MEAN,
+        getElevationWeight: x => x.SPACES,
+        elevationAggregation: AGGREGATION_OPERATION.MAX,
+        lightSettings: LIGHT_SETTINGS,
+        gpuAggregation: true
       })
     ],
     referenceImageUrl: './test/render/golden-images/grid-lnglat.png',
@@ -1155,7 +1185,7 @@ export const TEST_CASES = [
       bearing: 0
     },
     layers: [
-      new GPUGridLayer({
+      new GridLayer({
         id: 'gpu-grid-lnglat',
         data: dataSamples.points,
         cellSize: 200,
@@ -1170,31 +1200,31 @@ export const TEST_CASES = [
     referenceImageUrl: './test/render/golden-images/gpu-grid-lnglat.png',
     ignoreGPUs: [`Intel`]
   },
-  {
-    name: 'gpu-grid-lnglat-cpu-aggregation',
-    viewState: {
-      latitude: 37.751537058389985,
-      longitude: -122.42694203247012,
-      zoom: 11.5,
-      pitch: 0,
-      bearing: 0
-    },
-    layers: [
-      new GPUGridLayer({
-        id: 'gpu-grid-lnglat-cpu-aggregation',
-        data: dataSamples.points,
-        cellSize: 200,
-        opacity: 1,
-        extruded: true,
-        pickable: true,
-        getPosition: d => d.COORDINATES,
-        lightSettings: LIGHT_SETTINGS,
-        gpuAggregation: false
-      })
-    ],
-    referenceImageUrl: './test/render/golden-images/gpu-grid-lnglat.png',
-    ignoreGPUs: [`Intel`]
-  },
+  // {
+  //   name: 'gpu-grid-lnglat-cpu-aggregation',
+  //   viewState: {
+  //     latitude: 37.751537058389985,
+  //     longitude: -122.42694203247012,
+  //     zoom: 11.5,
+  //     pitch: 0,
+  //     bearing: 0
+  //   },
+  //   layers: [
+  //     new GPUGridLayer({
+  //       id: 'gpu-grid-lnglat-cpu-aggregation',
+  //       data: dataSamples.points,
+  //       cellSize: 200,
+  //       opacity: 1,
+  //       extruded: true,
+  //       pickable: true,
+  //       getPosition: d => d.COORDINATES,
+  //       lightSettings: LIGHT_SETTINGS,
+  //       gpuAggregation: false
+  //     })
+  //   ],
+  //   referenceImageUrl: './test/render/golden-images/gpu-grid-lnglat.png',
+  //   ignoreGPUs: [`Intel`]
+  // },
   {
     name: 'contour-lnglat-cpu-aggregation',
     viewState: {

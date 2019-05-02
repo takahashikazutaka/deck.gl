@@ -2,26 +2,23 @@ import {
   MeshLayer,
   PathOutlineLayer,
   PathMarkerLayer,
-  AdvancedTextLayer,
-  GPUGridLayer,
-  NewGridLayer
-  // KMLLayer
+  AdvancedTextLayer
 } from '@deck.gl/experimental-layers';
 
 import {COORDINATE_SYSTEM} from 'deck.gl';
 import GL from 'luma.gl/constants';
 import {CylinderGeometry} from 'luma.gl';
 import * as dataSamples from '../data-samples';
-import {AGGREGATION_OPERATION} from '@deck.gl/core';
-
-const LIGHT_SETTINGS = {
-  lightsPosition: [-122.45, 37.66, 8000, -122.0, 38.0, 8000],
-  ambientRatio: 0.3,
-  diffuseRatio: 0.6,
-  specularRatio: 0.4,
-  lightsStrength: [1, 0.0, 0.8, 0.0],
-  numberOfLights: 2
-};
+// import {AGGREGATION_OPERATION} from '@deck.gl/core';
+//
+// const LIGHT_SETTINGS = {
+//   lightsPosition: [-122.45, 37.66, 8000, -122.0, 38.0, 8000],
+//   ambientRatio: 0.3,
+//   diffuseRatio: 0.6,
+//   specularRatio: 0.4,
+//   lightsStrength: [1, 0.0, 0.8, 0.0],
+//   numberOfLights: 2
+// };
 
 const MeshLayerExample = {
   layer: MeshLayer,
@@ -171,7 +168,7 @@ const AdvancedTextLayerExample = {
     fontSmoothing: 0.2
   }
 };
-
+/*
 const GPUGridLayerExample = {
   layer: GPUGridLayer,
   getData: () => dataSamples.points,
@@ -224,6 +221,20 @@ const GPUGridLayerPerfExample = (id, getData) => ({
   }
 });
 
+const NewGridLayerPerfExample = (id, getData) => ({
+  layer: NewGridLayer,
+  getData,
+  props: {
+    id: `newGridLayerPerf-${id}`,
+    cellSize: 200,
+    opacity: 1,
+    extruded: true,
+    pickable: false,
+    getPosition: d => d,
+    lightSettings: LIGHT_SETTINGS
+  }
+});*/
+
 /* eslint-disable quote-props */
 export default {
   'Experimental 3D Layers': {
@@ -236,10 +247,12 @@ export default {
     'PathMarkerLayer (Meter)': PathMarkerExampleMeter
   },
   'Experimental Core Layers': {
-    AdvancedTextLayer: AdvancedTextLayerExample,
-    GPUGridLayer: GPUGridLayerExample,
-    NewGridLayer: NewGridLayerExample,
-    'GPUGridLayer (1M)': GPUGridLayerPerfExample('1M', dataSamples.getPoints1M),
-    'GPUGridLayer (5M)': GPUGridLayerPerfExample('5M', dataSamples.getPoints5M)
+    AdvancedTextLayer: AdvancedTextLayerExample
+    // GPUGridLayer: GPUGridLayerExample,
+    // NewGridLayer: NewGridLayerExample,
+    // 'GPUGridLayer (1M)': GPUGridLayerPerfExample('1M', dataSamples.getPoints1M),
+    // 'GPUGridLayer (5M)': GPUGridLayerPerfExample('5M', dataSamples.getPoints5M),
+    // 'NewGridLayer (1M)': NewGridLayerPerfExample('1M', dataSamples.getPoints1M),
+    // 'NewGridLayer (5M)': NewGridLayerPerfExample('5M', dataSamples.getPoints5M)
   }
 };

@@ -18,342 +18,147 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {CompositeLayer, experimental} from '@deck.gl/core';
-const {BinSorter, defaultColorRange, getQuantizeScale, getLinearScale} = experimental;
+import {CompositeLayer, AGGREGATION_OPERATION} from '@deck.gl/core';
+import GPUGridLayer from './gpu-grid-layer/gpu-grid-layer';
+import CPUGridLayer from './cpu-grid-layer/cpu-grid-layer';
 
-import GridCellLayer from '../grid-cell-layer/grid-cell-layer';
+const defaultProps = Object.assign({}, GPUGridLayer.defaultProps, CPUGridLayer.defaultProps);
 
-import {pointToDensityGridData} from './grid-aggregator';
+// Function to convert from getWeight/accessors props to getValue prop for Color and Elevation
+function getMean(pts, accessor) {
+  const filtered = pts.map(item => accessor(item)).filter(pt => Number.isFinite(pt));
 
-function nop() {}
+  return filtered.length ? filtered.reduce((accu, curr) => accu + curr, 0) / filtered.length : null;
+}
 
-// To detect a default value vs custom value, used in new-grid-layer
-const DEFAULT_GETCOLORVALUE = points => points.length;
-const DEFAULT_GETELEVATIONVALUE = points => points.length;
-const defaultProps = {
-  // color
-  colorDomain: null,
-  colorRange: defaultColorRange,
-  getColorValue: DEFAULT_GETCOLORVALUE,
-  lowerPercentile: {type: 'number', min: 0, max: 100, value: 0},
-  upperPercentile: {type: 'number', min: 0, max: 100, value: 100},
-  onSetColorDomain: nop,
+function getSum(pts, accessor) {
+  const filtered = pts.map(item => accessor(item)).filter(pt => Number.isFinite(pt));
 
-  // elevation
-  elevationDomain: null,
-  elevationRange: [0, 1000],
-  getElevationValue: DEFAULT_GETELEVATIONVALUE,
-  elevationLowerPercentile: {type: 'number', min: 0, max: 100, value: 0},
-  elevationUpperPercentile: {type: 'number', min: 0, max: 100, value: 100},
-  elevationScale: 1,
-  onSetElevationDomain: nop,
+  return filtered.length ? filtered.reduce((accu, curr) => accu + curr, 0) : null;
+}
 
-  // grid
-  cellSize: {type: 'number', min: 0, max: 1000, value: 1000},
-  coverage: {type: 'number', min: 0, max: 1, value: 1},
-  getPosition: {type: 'accessor', value: x => x.position},
-  extruded: false,
-  fp64: false,
+function getMax(pts, accessor) {
+  const filtered = pts.map(item => accessor(item)).filter(pt => Number.isFinite(pt));
 
-  // Optional settings for 'lighting' shader module
-  lightSettings: {}
-};
+  return filtered.length
+    ? filtered.reduce((accu, curr) => (curr > accu ? curr : accu), -Infinity)
+    : null;
+}
+
+function getMin(pts, accessor) {
+  const filtered = pts.map(item => accessor(item)).filter(pt => Number.isFinite(pt));
+
+  return filtered.length
+    ? filtered.reduce((accu, curr) => (curr < accu ? curr : accu), Infinity)
+    : null;
+}
+
+function getValueFunc(aggregation, accessor) {
+  switch (aggregation) {
+    case AGGREGATION_OPERATION.MIN:
+      return pts => getMin(pts, accessor);
+    case AGGREGATION_OPERATION.SUM:
+      return pts => getSum(pts, accessor);
+    case AGGREGATION_OPERATION.MEAN:
+      return pts => getMean(pts, accessor);
+    case AGGREGATION_OPERATION.MAX:
+      return pts => getMax(pts, accessor);
+    default:
+      return null;
+  }
+}
 
 export default class GridLayer extends CompositeLayer {
   initializeState() {
     this.state = {
-      layerData: [],
-      sortedColorBins: null,
-      sortedElevationBins: null,
-      colorValueDomain: null,
-      elevationValueDomain: null,
-      colorScaleFunc: nop,
-      elevationScaleFunc: nop,
-      dimensionUpdaters: this.getDimensionUpdaters()
+      gpuAggregation: true
     };
   }
 
   updateState({oldProps, props, changeFlags}) {
-    const reprojectNeeded = this.needsReProjectPoints(oldProps, props, changeFlags);
-
-    if (changeFlags.dataChanged || reprojectNeeded) {
-      // project data into hexagons, and get sortedBins
-      this.getLayerData();
-    } else {
-      const dimensionChanges = this.getDimensionChanges(oldProps, props) || [];
-      dimensionChanges.forEach(f => typeof f === 'function' && f.apply(this));
+    const newState = {};
+    newState.gpuAggregation = this.shouldUseGPUAggregation(props);
+    if (!newState.gpuAggregation) {
+      // convert color and elevation accessors if needed
+      const {
+        colorAggregation,
+        getColorWeight,
+        getColorValue,
+        elevationAggregation,
+        getElevationWeight,
+        getElevationValue
+      } = props;
+      const {DEFAULT_GETCOLORVALUE, DEFAULT_GETELEVATIONVALUE} = CPUGridLayer;
+      newState.getColorValue =
+        getColorValue && getColorValue !== DEFAULT_GETCOLORVALUE
+          ? getColorValue
+          : getValueFunc(colorAggregation, getColorWeight);
+      newState.getElevationValue =
+        getElevationValue && getElevationValue !== DEFAULT_GETELEVATIONVALUE
+          ? getElevationValue
+          : getValueFunc(elevationAggregation, getElevationWeight);
     }
-  }
-
-  needsReProjectPoints(oldProps, props, changeFlags) {
-    return (
-      oldProps.cellSize !== props.cellSize ||
-      (changeFlags.updateTriggersChanged &&
-        (changeFlags.updateTriggersChanged.all || changeFlags.updateTriggersChanged.getPosition))
-    );
-  }
-
-  getDimensionUpdaters() {
-    // dimension updaters are sequential,
-    // if the first one needs to be called, the 2nd and 3rd one will automatically
-    // be called. e.g. if ColorValue needs to be updated, getColorValueDomain and getColorScale
-    // will automatically be called
-    return {
-      getColor: [
-        {
-          id: 'value',
-          triggers: ['getColorValue'],
-          updater: this.getSortedColorBins
-        },
-        {
-          id: 'domain',
-          triggers: ['lowerPercentile', 'upperPercentile'],
-          updater: this.getColorValueDomain
-        },
-        {
-          id: 'scaleFunc',
-          triggers: ['colorDomain', 'colorRange'],
-          updater: this.getColorScale
-        }
-      ],
-      getElevation: [
-        {
-          id: 'value',
-          triggers: ['getElevationValue'],
-          updater: this.getSortedElevationBins
-        },
-        {
-          id: 'domain',
-          triggers: ['elevationLowerPercentile', 'elevationUpperPercentile'],
-          updater: this.getElevationValueDomain
-        },
-        {
-          id: 'scaleFunc',
-          triggers: ['elevationDomain', 'elevationRange'],
-          updater: this.getElevationScale
-        }
-      ]
-    };
-  }
-
-  getDimensionChanges(oldProps, props) {
-    const {dimensionUpdaters} = this.state;
-    const updaters = [];
-
-    // get dimension to be updated
-    for (const dimensionKey in dimensionUpdaters) {
-      // return the first triggered updater for each dimension
-      const needUpdate = dimensionUpdaters[dimensionKey].find(item =>
-        item.triggers.some(t => oldProps[t] !== props[t])
-      );
-
-      if (needUpdate) {
-        updaters.push(needUpdate.updater);
-      }
-    }
-
-    return updaters.length ? updaters : null;
-  }
-
-  getPickingInfo({info}) {
-    const {sortedColorBins, sortedElevationBins} = this.state;
-
-    const isPicked = info.picked && info.index > -1;
-    let object = null;
-
-    if (isPicked) {
-      const cell = this.state.layerData[info.index];
-
-      const colorValue =
-        sortedColorBins.binMap[cell.index] && sortedColorBins.binMap[cell.index].value;
-      const elevationValue =
-        sortedElevationBins.binMap[cell.index] && sortedElevationBins.binMap[cell.index].value;
-
-      object = Object.assign(
-        {
-          colorValue,
-          elevationValue
-        },
-        cell
-      );
-    }
-
-    // add bin colorValue and elevationValue to info
-    return Object.assign(info, {
-      picked: Boolean(object),
-      // override object with picked cell
-      object
-    });
-  }
-
-  getUpdateTriggers() {
-    const {dimensionUpdaters} = this.state;
-
-    // merge all dimension triggers
-    const updateTriggers = {};
-
-    for (const dimensionKey in dimensionUpdaters) {
-      updateTriggers[dimensionKey] = {};
-
-      for (const step of dimensionUpdaters[dimensionKey]) {
-        step.triggers.forEach(prop => {
-          updateTriggers[dimensionKey][prop] = this.props[prop];
-        });
-      }
-    }
-
-    return updateTriggers;
-  }
-
-  getLayerData() {
-    const {data, cellSize, getPosition} = this.props;
-    const {layerData} = pointToDensityGridData(data, cellSize, getPosition);
-
-    this.setState({layerData});
-    this.getSortedBins();
-  }
-
-  getValueDomain() {
-    this.getColorValueDomain();
-    this.getElevationValueDomain();
-  }
-
-  getSortedBins() {
-    this.getSortedColorBins();
-    this.getSortedElevationBins();
-  }
-
-  getSortedColorBins() {
-    const {getColorValue} = this.props;
-    const sortedColorBins = new BinSorter(this.state.layerData || [], getColorValue);
-
-    this.setState({sortedColorBins});
-    this.getColorValueDomain();
-  }
-
-  getSortedElevationBins() {
-    const {getElevationValue} = this.props;
-    const sortedElevationBins = new BinSorter(this.state.layerData || [], getElevationValue);
-    this.setState({sortedElevationBins});
-    this.getElevationValueDomain();
-  }
-
-  getColorValueDomain() {
-    const {lowerPercentile, upperPercentile, onSetColorDomain} = this.props;
-
-    this.state.colorValueDomain = this.state.sortedColorBins.getValueRange([
-      lowerPercentile,
-      upperPercentile
-    ]);
-
-    if (typeof onSetColorDomain === 'function') {
-      onSetColorDomain(this.state.colorValueDomain);
-    }
-
-    this.getColorScale();
-  }
-
-  getElevationValueDomain() {
-    const {elevationLowerPercentile, elevationUpperPercentile, onSetElevationDomain} = this.props;
-
-    this.state.elevationValueDomain = this.state.sortedElevationBins.getValueRange([
-      elevationLowerPercentile,
-      elevationUpperPercentile
-    ]);
-
-    if (typeof onSetElevationDomain === 'function') {
-      onSetElevationDomain(this.state.elevationValueDomain);
-    }
-
-    this.getElevationScale();
-  }
-
-  getColorScale() {
-    const {colorRange} = this.props;
-    const colorDomain = this.props.colorDomain || this.state.colorValueDomain;
-
-    this.state.colorScaleFunc = getQuantizeScale(colorDomain, colorRange);
-  }
-
-  getElevationScale() {
-    const {elevationRange} = this.props;
-    const elevationDomain = this.props.elevationDomain || this.state.elevationValueDomain;
-
-    this.state.elevationScaleFunc = getLinearScale(elevationDomain, elevationRange);
-  }
-
-  _onGetSublayerColor(cell) {
-    const {sortedColorBins, colorScaleFunc, colorValueDomain} = this.state;
-
-    const cv = sortedColorBins.binMap[cell.index] && sortedColorBins.binMap[cell.index].value;
-    const colorDomain = this.props.colorDomain || colorValueDomain;
-
-    const isColorValueInDomain = cv >= colorDomain[0] && cv <= colorDomain[colorDomain.length - 1];
-
-    // if cell value is outside domain, set alpha to 0
-    const color = isColorValueInDomain ? colorScaleFunc(cv) : [0, 0, 0, 0];
-
-    // add alpha to color if not defined in colorRange
-    color[3] = Number.isFinite(color[3]) ? color[3] : 255;
-
-    return color;
-  }
-
-  _onGetSublayerElevation(cell) {
-    const {sortedElevationBins, elevationScaleFunc, elevationValueDomain} = this.state;
-    const ev =
-      sortedElevationBins.binMap[cell.index] && sortedElevationBins.binMap[cell.index].value;
-
-    const elevationDomain = this.props.elevationDomain || elevationValueDomain;
-
-    const isElevationValueInDomain =
-      ev >= elevationDomain[0] && ev <= elevationDomain[elevationDomain.length - 1];
-
-    // if cell value is outside domain, set elevation to -1
-    return isElevationValueInDomain ? elevationScaleFunc(ev) : -1;
+    this.setState(newState);
   }
 
   renderLayers() {
-    const {
-      elevationScale,
-      fp64,
-      extruded,
-      cellSize,
-      coverage,
-      lightSettings,
-      transitions
-    } = this.props;
+    let gridLayer = null;
 
-    const SubLayerClass = this.getSubLayerClass('grid-cell', GridCellLayer);
+    if (this.state.gpuAggregation) {
+      const GPULayer = this.getSubLayerClass('gpu-grid-layer', GPUGridLayer);
+      // console.log('Using GPUGridLayer ####');
+      gridLayer = new GPULayer(
+        this.props,
+        this.getSubLayerProps({
+          id: 'GPU',
+          // Note: data has to be passed explicitly like this to avoid being empty
+          data: this.props.data
+        })
+      );
+    } else {
+      const CPULayer = this.getSubLayerClass('cpu-grid-layer', CPUGridLayer);
+      // console.log('Using CPUGridLayer ----');
+      const {getColorValue, getElevationValue} = this.state;
+      gridLayer = new CPULayer(
+        this.props,
+        {
+          getColorValue,
+          getElevationValue
+        },
+        this.getSubLayerProps({
+          id: 'CPU',
+          // Note: data has to be passed explicitly like this to avoid being empty
+          data: this.props.data
+        })
+      );
+    }
+    return [gridLayer];
 
-    return new SubLayerClass(
-      {
-        fp64,
-        cellSize,
-        coverage,
-        lightSettings,
-        elevationScale,
-        extruded,
-
-        getColor: this._onGetSublayerColor.bind(this),
-        getElevation: this._onGetSublayerElevation.bind(this),
-        transitions: transitions && {
-          getColor: transitions.getColorValue,
-          getElevation: transitions.getElevationValue
-        }
-      },
+    /*
+    return this.props.gpuAggregation ?
+    [new GPUGridLayer(
+      this.props,
       this.getSubLayerProps({
-        id: 'grid-cell',
-        updateTriggers: this.getUpdateTriggers()
-      }),
-      {
-        data: this.state.layerData
-      }
-    );
+        id: 'GPU',
+        // Note: data has to be passed explicitly like this to avoid being empty
+        data: this.props.data
+      })
+    )] :
+    [new GridLayer(
+      this.props,
+      this.getSubLayerProps({
+        id: 'CPU',
+        // Note: data has to be passed explicitly like this to avoid being empty
+        data: this.props.data
+      })
+    )];
+*/
+  }
+  // Private methods
+  shouldUseGPUAggregation({gpuAggregation}) {
+    return gpuAggregation;
   }
 }
 
 GridLayer.layerName = 'GridLayer';
 GridLayer.defaultProps = defaultProps;
-GridLayer.DEFAULT_GETCOLORVALUE = DEFAULT_GETCOLORVALUE;
-GridLayer.DEFAULT_GETELEVATIONVALUE = DEFAULT_GETELEVATIONVALUE;

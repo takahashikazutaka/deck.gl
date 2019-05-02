@@ -24,17 +24,17 @@ import * as FIXTURES from 'deck.gl/test/data';
 
 import {testLayer, testInitializeLayer} from '@deck.gl/test-utils';
 
-import {GridLayer, GridCellLayer} from 'deck.gl';
+import {CPUGridLayer, GridCellLayer} from 'deck.gl';
 
 const getColorValue = points => points.length;
 const getElevationValue = points => points.length;
 const getPosition = d => d.COORDINATES;
 
-test('GridLayer#renderSubLayer', t => {
-  makeSpy(GridLayer.prototype, '_onGetSublayerColor');
-  makeSpy(GridLayer.prototype, '_onGetSublayerElevation');
+test('CPUGridLayer#renderSubLayer', t => {
+  makeSpy(CPUGridLayer.prototype, '_onGetSublayerColor');
+  makeSpy(CPUGridLayer.prototype, '_onGetSublayerElevation');
 
-  const layer = new GridLayer({
+  const layer = new CPUGridLayer({
     data: FIXTURES.points,
     cellSize: 500,
     getPosition,
@@ -51,17 +51,20 @@ test('GridLayer#renderSubLayer', t => {
 
   // should call attribute updater twice
   // because test util calls both initialize and update layer
-  t.ok(GridLayer.prototype._onGetSublayerColor.called, 'should call _onGetSublayerColor');
-  t.ok(GridLayer.prototype._onGetSublayerElevation.called, 'should call _onGetSublayerElevation');
-  GridLayer.prototype._onGetSublayerColor.restore();
-  GridLayer.prototype._onGetSublayerElevation.restore();
+  t.ok(CPUGridLayer.prototype._onGetSublayerColor.called, 'should call _onGetSublayerColor');
+  t.ok(
+    CPUGridLayer.prototype._onGetSublayerElevation.called,
+    'should call _onGetSublayerElevation'
+  );
+  CPUGridLayer.prototype._onGetSublayerColor.restore();
+  CPUGridLayer.prototype._onGetSublayerElevation.restore();
 
   t.end();
 });
 
-test('GridLayer#updates', t => {
+test('CPUGridLayer#updates', t => {
   testLayer({
-    Layer: GridLayer,
+    Layer: CPUGridLayer,
     testCases: [
       {
         props: {
@@ -79,27 +82,27 @@ test('GridLayer#updates', t => {
             elevationValueDomain
           } = layer.state;
 
-          t.ok(layerData.length > 0, 'GridLayer.state.layerDate calculated');
-          t.ok(sortedColorBins, 'GridLayer.state.sortedColorBins calculated');
-          t.ok(sortedElevationBins, 'GridLayer.state.sortedColorBins calculated');
-          t.ok(Array.isArray(colorValueDomain), 'GridLayer.state.valueDomain calculated');
-          t.ok(Array.isArray(elevationValueDomain), 'GridLayer.state.valueDomain calculated');
+          t.ok(layerData.length > 0, 'CPUGridLayer.state.layerDate calculated');
+          t.ok(sortedColorBins, 'CPUGridLayer.state.sortedColorBins calculated');
+          t.ok(sortedElevationBins, 'CPUGridLayer.state.sortedColorBins calculated');
+          t.ok(Array.isArray(colorValueDomain), 'CPUGridLayer.state.valueDomain calculated');
+          t.ok(Array.isArray(elevationValueDomain), 'CPUGridLayer.state.valueDomain calculated');
 
           t.ok(
             Array.isArray(sortedColorBins.sortedBins),
-            'GridLayer.state.sortedColorBins.sortedBins calculated'
+            'CPUGridLayer.state.sortedColorBins.sortedBins calculated'
           );
           t.ok(
             Array.isArray(sortedElevationBins.sortedBins),
-            'GridLayer.state.sortedColorBins.sortedBins calculated'
+            'CPUGridLayer.state.sortedColorBins.sortedBins calculated'
           );
           t.ok(
             Number.isFinite(sortedColorBins.maxCount),
-            'GridLayer.state.sortedColorBins.maxCount calculated'
+            'CPUGridLayer.state.sortedColorBins.maxCount calculated'
           );
           t.ok(
             Number.isFinite(sortedElevationBins.maxCount),
-            'GridLayer.state.sortedColorBins.maxCount calculated'
+            'CPUGridLayer.state.sortedColorBins.maxCount calculated'
           );
 
           const firstSortedBin = sortedColorBins.sortedBins[0];
@@ -107,7 +110,7 @@ test('GridLayer#updates', t => {
 
           t.ok(
             sortedColorBins.binMap[binTocell.index] === firstSortedBin,
-            'Correct GridLayer.state.sortedColorBins.binMap created'
+            'Correct CPUGridLayer.state.sortedColorBins.binMap created'
           );
         }
       },
@@ -452,12 +455,12 @@ test('GridLayer#updates', t => {
   t.end();
 });
 
-test('GridLayer#updateTriggers', t => {
+test('CPUGridLayer#updateTriggers', t => {
   // setup spies
   const SPIES = ['_onGetSublayerColor', '_onGetSublayerElevation'];
 
   testLayer({
-    Layer: GridLayer,
+    Layer: CPUGridLayer,
     spies: SPIES,
     testCases: [
       {

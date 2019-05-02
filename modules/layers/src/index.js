@@ -28,6 +28,7 @@ export {default as ScatterplotLayer} from './scatterplot-layer/scatterplot-layer
 
 export {default as ScreenGridLayer} from './screen-grid-layer/screen-grid-layer';
 export {default as GridLayer} from './grid-layer/grid-layer';
+export {default as CPUGridLayer} from './grid-layer/cpu-grid-layer/cpu-grid-layer';
 export {default as GridCellLayer} from './grid-cell-layer/grid-cell-layer';
 
 export {default as HexagonLayer} from './hexagon-layer/hexagon-layer';

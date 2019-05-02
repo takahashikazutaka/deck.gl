@@ -24,6 +24,7 @@ import ContourLayer from '@deck.gl/layers/contour-layer/contour-layer';
 // Demonstrate immutable support
 import * as dataSamples from '../data-samples';
 import {parseColor, setOpacity} from '../utils/color';
+import {AGGREGATION_OPERATION} from '@deck.gl/core';
 
 const LIGHT_SETTINGS = {
   lightsPosition: [-122.45, 37.66, 8000, -122.0, 38.0, 8000],
@@ -377,8 +378,10 @@ const GridLayerExample = {
     extruded: true,
     pickable: true,
     getPosition: d => d.COORDINATES,
-    getColorValue,
-    getElevationValue,
+    getColorWeight: x => x.SPACES,
+    colorAggregation: AGGREGATION_OPERATION.MEAN,
+    getElevationWeight: x => x.SPACES,
+    elevationAggregation: AGGREGATION_OPERATION.MAX,
     lightSettings: LIGHT_SETTINGS
   }
 };

@@ -111,6 +111,7 @@ export {
   ScatterplotLayer,
   ScreenGridLayer,
   GridLayer,
+  CPUGridLayer,
   GridCellLayer,
   HexagonLayer,
   HexagonCellLayer,
