@@ -24,7 +24,7 @@ import {
   _GPUGridAggregator as GPUGridAggregator,
   _pointToDensityGridData as pointToDensityGridData
 } from '@deck.gl/core';
-const {defaultColorRange} = experimental;
+const {defaultColorRange, colorRangeToFlatArray} = experimental;
 
 import GPUGridCellLayer from './gpu-grid-cell-layer';
 
@@ -159,10 +159,7 @@ export default class GPUGridLayer extends CompositeLayer {
     const minColor = MINCOLOR;
     const maxColor = MAXCOLOR;
 
-    const colorRange = [];
-    this.props.colorRange.forEach(color => {
-      colorRange.push(color[0], color[1], color[2], color[3] || 255);
-    });
+    const colorRange = colorRangeToFlatArray(this.props.colorRange, Float32Array, 255);
 
     // return props to the sublayer constructor
     return super.getSubLayerProps({

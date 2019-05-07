@@ -28,7 +28,7 @@ import {
   AGGREGATION_OPERATION,
   log
 } from '@deck.gl/core';
-const {count, defaultColorRange} = experimental;
+const {count, defaultColorRange, colorRangeToFlatArray} = experimental;
 
 import GL from 'luma.gl/constants';
 import {Model, Geometry, Buffer, isWebGL2} from 'luma.gl';
@@ -373,11 +373,7 @@ export default class ScreenGridLayer extends Layer {
     }
 
     if (oldProps.colorRange !== props.colorRange) {
-      const colorRangeUniform = [];
-      props.colorRange.forEach(color => {
-        colorRangeUniform.push(color[0], color[1], color[2], color[3] || 255);
-      });
-      newState.colorRange = colorRangeUniform;
+      newState.colorRange = colorRangeToFlatArray(props.colorRange, Float32Array, 255);
     }
 
     if (

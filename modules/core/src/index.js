@@ -79,7 +79,7 @@ import {flattenVertices, fillArray} from './utils/flatten'; // Export? move to l
 
 import {default as BinSorter} from './utils/bin-sorter';
 import {default as Tesselator} from './utils/tesselator'; // Export? move to luma.gl or math.gl?
-import {defaultColorRange} from './utils/color-utils';
+import {defaultColorRange, colorRangeToFlatArray} from './utils/color-utils';
 import {linearScale, getLinearScale, quantizeScale, getQuantizeScale} from './utils/scale-utils';
 
 export {
@@ -105,6 +105,7 @@ export const experimental = {
   quantizeScale,
   getQuantizeScale,
   defaultColorRange,
+  colorRangeToFlatArray,
   flattenVertices,
   fillArray,
   count
