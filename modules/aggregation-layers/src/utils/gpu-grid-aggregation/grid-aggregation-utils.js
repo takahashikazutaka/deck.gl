@@ -226,18 +226,17 @@ function getGPUAggregationParams({boundingBox, cellSize, worldOrigin}) {
   // Setup transformation matrix so that every point is in +ve range
   const gridTransformMatrix = new Matrix4().translate([-1 * originX, -1 * originY, 0]);
 
-  // const cellSize = [gridOffset.xOffset, gridOffset.yOffset];
   const gridOrigin = [originX, originY];
-  const width = xMax - xMin + cellSize[0];
-  const height = yMax - yMin + cellSize[1];
+  const width = xMax - originX;
+  const height = yMax - originY;
 
   const gridSize = [Math.ceil(width / cellSize[0]), Math.ceil(height / cellSize[1])];
 
   return {
     gridOrigin,
     gridSize,
-    width,
-    height,
+    width: gridSize[0] * cellSize[0],
+    height: gridSize[1] * cellSize[1],
     gridTransformMatrix
   };
 }

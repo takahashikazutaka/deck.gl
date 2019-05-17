@@ -39,7 +39,7 @@ const defaultProps = {
   elevationScale: {type: 'number', min: 0, value: 1},
   extruded: true,
   fp64: false,
-  pickable: false, // TODO: add picking support (read from aggregated texture)
+  pickable: true,
 
   minColor: {type: 'color', value: DEFAULT_MINCOLOR},
   maxColor: {type: 'color', value: DEFAULT_MAXCOLOR},
@@ -86,6 +86,9 @@ export default class GPUGridCellLayer extends Layer {
     }
     if (props.elevationBuffer !== oldProps.elevationBuffer) {
       this.state.attributeManager.invalidate('elevations');
+    }
+    if (props.numInstances !== oldProps.numInstances) {
+      this.state.attributeManager.invalidate('instancePickingColors');
     }
   }
 

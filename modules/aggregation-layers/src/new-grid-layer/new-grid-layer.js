@@ -4,7 +4,9 @@ import GPUGridAggregator from '../utils/gpu-grid-aggregation/gpu-grid-aggregator
 import GPUGridLayer from '../gpu-grid-layer/gpu-grid-layer';
 import GridLayer from '../grid-layer/grid-layer';
 
-const defaultProps = Object.assign({}, GPUGridLayer.defaultProps, GridLayer.defaultProps);
+const defaultProps = Object.assign({}, GPUGridLayer.defaultProps, GridLayer.defaultProps, {
+  pickable: false
+});
 
 function sumReducer(accu, cur) {
   return accu + cur;
@@ -58,16 +60,11 @@ function getValueFunc(aggregation, accessor) {
   }
 }
 
-export default class NewGPULayer extends CompositeLayer {
+export default class NewGridLayer extends CompositeLayer {
   initializeState() {
     this.state = {
       useGPUAggregation: true
     };
-  }
-
-  getPickingInfo(opts) {
-    // TODO: implement picking.
-    return Object.assign({}, opts.info, {picked: false, object: null});
   }
 
   updateState({oldProps, props, changeFlags}) {
@@ -161,5 +158,5 @@ export default class NewGPULayer extends CompositeLayer {
   }
 }
 
-NewGPULayer.layerName = 'NewGPULayer';
-NewGPULayer.defaultProps = defaultProps;
+NewGridLayer.layerName = 'NewGridLayer';
+NewGridLayer.defaultProps = defaultProps;
