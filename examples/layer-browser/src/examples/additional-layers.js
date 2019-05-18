@@ -63,7 +63,25 @@ const ScenegraphLayerExample = {
     getPosition: d => d.COORDINATES,
     getOrientation: d => [Math.random() * 360, Math.random() * 360, Math.random() * 360],
     getTranslation: d => [0, 0, Math.random() * 10000],
-    getScale: [1, 1, 1]
+    getScale: [1, 1, 1],
+    _lighting: 'flat'
+  }
+};
+
+const ScenegraphLayerPbrExample = {
+  layer: ScenegraphLayer,
+  props: {
+    id: 'scenegraph-layer-pbr',
+    data: dataSamples.points,
+    pickable: true,
+    sizeScale: 50,
+    scenegraph:
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
+    getPosition: d => d.COORDINATES,
+    getOrientation: d => [Math.random() * 360, Math.random() * 360, Math.random() * 360],
+    getTranslation: d => [0, 0, Math.random() * 10000],
+    getScale: [1, 1, 1],
+    _lighting: 'pbr'
   }
 };
 
@@ -176,7 +194,8 @@ const TripsLayerExample = {
 export default {
   'Mesh Layers': {
     SimpleMeshLayer: SimpleMeshLayerExample,
-    ScenegraphLayer: ScenegraphLayerExample
+    ScenegraphLayer: ScenegraphLayerExample,
+    'ScenegraphLayer (PBR)': ScenegraphLayerPbrExample
   },
   'Geo Layers': {
     S2Layer: S2LayerExample,
