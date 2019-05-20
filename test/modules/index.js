@@ -18,14 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import './imports-spec';
-import './core';
+require('reify');
 
-import './layers';
-import './aggregation-layers';
-import './geo-layers';
+require('./imports-spec');
+require('./core');
 
-import './json';
+require('./layers');
+require('./aggregation-layers');
+require('./geo-layers');
+
+require('./json');
 
 // TODO - Tests currently only work in browser
 if (typeof document !== 'undefined') {

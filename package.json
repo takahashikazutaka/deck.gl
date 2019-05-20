@@ -17,7 +17,7 @@
     "modules/*"
   ],
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap",
+    "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn && ocular-bootstrap",
     "clean": "ocular-clean",
     "build": "ocular-clean && ocular-build",
     "version": "ocular-build core,main",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@babel/polyfill": "^7.0.0",
     "@probe.gl/bench": "^3.0.1",
-    "@probe.gl/test-utils": "^3.0.1",
+    "@probe.gl/test-utils": "^3.0.2",
     "babel-loader": "^8.0.0",
     "babel-plugin-inline-webgl-constants": "^1.0.0",
     "babel-plugin-remove-glsl-comments": "^0.1.0",
@@ -50,7 +50,7 @@
     "eslint-plugin-react": "^7.10",
     "gl": "^4.2.2",
     "glsl-transpiler": "^1.8.3",
-    "ocular-dev-tools": "0.0.18",
+    "ocular-dev-tools": "0.0.24",
     "png.js": "^0.1.1",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1",
