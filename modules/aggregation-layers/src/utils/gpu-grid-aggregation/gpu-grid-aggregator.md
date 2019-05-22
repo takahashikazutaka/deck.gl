@@ -116,6 +116,13 @@ Performs aggregation either on CPU or GPU based on the provided options and brow
 
 ### getData
 
-  * `weights` (Optional, Array of Strings or a String) : Takes one or more weight `id`s and returns their aggregation results in CPU memory (Typed Arrays). When none specified, returns aggregation results of all available weights.
+  * `weights` (Optional, Array of Strings or a String) : weight `id` String or an array of `id` Strings. When not provided, aggregation result of all available weights is returned.
+
+  Returns an object with aggregation results in CPU memory (Typed Arrays) for each requested weight. Returned object contains one entry per weight, with weight's `id` as key and results in corresponding value object. Aggregation result object for a given weight contains following values :
+    * `aggregationData` : Aggregated data per grid cell.
+    Following additional arrays exist if they were requested when aggregation is performed.
+    * `minData` : Min aggregation results.
+    * `maxData` : Max aggregation results.
+    * `maxMinData` : Combined max min aggregation results.
 
   NOTE: When aggregation is performed on GPU, `getData` performs Buffer read and can potentially an expensive operation due to CPU and GPU sync, in such cases data is also cached to avoid reading from GPU memory for subsequent calls.

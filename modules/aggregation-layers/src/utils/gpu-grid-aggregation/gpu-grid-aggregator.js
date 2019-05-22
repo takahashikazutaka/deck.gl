@@ -39,6 +39,11 @@ import TRANSFORM_MEAN_VS from './transform-mean-vs.glsl';
 import {getFloatTexture, getFramebuffer, getFloatArray} from './gpu-grid-aggregator-utils.js';
 
 const BUFFER_NAMES = ['aggregationBuffer', 'maxMinBuffer', 'minBuffer', 'maxBuffer'];
+const ARRAY_BUFFER_MAP = {
+  maxData: 'maxBuffer',
+  minData: 'minBuffer',
+  maxMinData: 'maxMinBuffer'
+};
 
 export default class GPUGridAggregator {
   // Decode and return aggregation data of given pixel.
@@ -222,11 +227,6 @@ export default class GPUGridAggregator {
     weights = weights && (Array.isArray(weights) ? weights : [weights]);
     const data = {};
     const results = this.state.results;
-    const ARRAY_BUFFER_MAP = {
-      maxData: 'maxBuffer',
-      minData: 'minBuffer',
-      maxMinData: 'maxMinBuffer'
-    };
     for (const weight in results) {
       if (!weights || weights.includes(weight)) {
         data[weight] = {};
